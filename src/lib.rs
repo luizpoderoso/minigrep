@@ -26,14 +26,18 @@ pub struct Config {
 
 impl Config {
     // Usa-se build ao invés de new pois a função pode falhar.
-    pub fn build(args: &Vec<String>) -> Result<Config, &'static str> {
-        if args.len() < 3 {
-            return Err("Número de argumentos insuficiente.");
-        }
+    pub fn build(mut args: impl Iterator<Item = String>) -> Result<Config, &'static str> {
+        args.next(); // já que o primeiro argumento é o nome do programa
 
-        // &args[0] é o nome do binário executável do programa
-        let query = args[1].clone(); // a string que está sendo buscada
-        let path = args[2].clone(); // o caminho para o arquivo em que a busca será feita
+        let query = match args.next() {
+            Some(arg) => arg,
+            None => return Err("A 'query' não foi informada."),
+        };
+
+        let path = match args.next() {
+            Some(arg) => arg,
+            None => return Err("O caminho para o arquivo não foi informado."),
+        };
 
         // Busca pela variável de ambiente IGNORE_CASE
         let ignore_case = env::var("IGNORE_CASE").is_ok();
@@ -48,27 +52,18 @@ impl Config {
 
 pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     let query = query.to_lowercase();
-    let mut results = Vec::new();
 
-    for line in contents.lines() {
-        if line.to_lowercase().contains(&query) {
-            results.push(line);
-        }
-    }
-
-    results
+    contents
+        .lines()
+        .filter(|line| line.to_lowercase().contains(&query))
+        .collect()
 }
 
 pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
-    let mut results = Vec::new();
-
-    for line in contents.lines() {
-        if line.contains(query) {
-            results.push(line);
-        }
-    }
-
-    results
+    contents
+        .lines()
+        .filter(|line| line.contains(&query))
+        .collect()
 }
 
 #[cfg(test)]
